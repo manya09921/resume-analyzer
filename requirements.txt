@@ -1,0 +1,5 @@
+Flask
+PyPDF2
+docx2txt
+scikit-learn
+gunicorn
