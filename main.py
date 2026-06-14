@@ -40,11 +40,10 @@ def matcher():
     if request.method =='POST':
         job_description= request.form.get('job_description')
         resume_files = request.files.getlist('resumes')
-        print("Files received:", resume_files)
+
         resumes = []
         filenames = []
         for resume_file in resume_files:
-            print("Current directory:", os.getcwd())
             if resume_file.filename == '':
                 continue
 
@@ -54,14 +53,10 @@ def matcher():
 
             resume_file.save(filepath)
 
-            print("Saved:", filepath)
-            print("Exists:", os.path.exists(filepath))
 
             resume_text = extract_text(filepath)
 
-            print("File:", resume_file.filename)
-            print("Extracted characters:", len(resume_text))
-            print(resume_text[:500])
+
 
             resumes.append(resume_text)
             filenames.append(resume_file.filename)
@@ -76,7 +71,6 @@ def matcher():
         )
 
         vectors = vectors.toarray()
-        print(vectors)
 
         job_vector = vectors[0]
         resume_vectors = vectors[1:]
@@ -99,11 +93,11 @@ def matcher():
             reverse=True
         )
 
-        print(results)
+
 
         top_n = min(3, len(similarities))
         top_indices = similarities.argsort()[-top_n:][::-1]
-        top_resumes=[resume_files[i].filename for i in top_indices]
+        top_resumes=[filenames[i] for i in top_indices]
         similarity_score=[round(similarities[i]*100,2) for i in top_indices]
 
         return render_template(
@@ -114,6 +108,4 @@ def matcher():
     return render_template('matchresume.html')
 
 if __name__ == '__main__':
-    if not os.path.exists(app.config['UPLOAD_FOLDER']):
-        os.makedirs(app.config['UPLOAD_FOLDER'])
     app.run(debug=True)
