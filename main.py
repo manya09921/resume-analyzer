@@ -1,4 +1,5 @@
 import os
+from werkzeug.utils import secure_filename
 from flask import Flask, request, render_template
 from PyPDF2 import PdfReader
 import docx2txt
@@ -6,6 +7,7 @@ from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
+os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 def extract_pdf(file_path):
     text=""
     with open(file_path, 'rb') as file:
@@ -46,10 +48,9 @@ def matcher():
             if resume_file.filename == '':
                 continue
 
-            filepath = os.path.join(
-                app.config['UPLOAD_FOLDER'],
-                resume_file.filename
-            )
+            filename = secure_filename(resume_file.filename)
+
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'],filename)
 
             resume_file.save(filepath)
 
