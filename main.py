@@ -57,7 +57,13 @@ def matcher():
             print("Saved:", filepath)
             print("Exists:", os.path.exists(filepath))
 
-            resumes.append(extract_text(filepath))
+            resume_text = extract_text(filepath)
+
+            print("File:", resume_file.filename)
+            print("Extracted characters:", len(resume_text))
+            print(resume_text[:500])
+
+            resumes.append(resume_text)
             filenames.append(resume_file.filename)
             os.remove(filepath)
         if not resumes or not job_description:
