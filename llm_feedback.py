@@ -4,24 +4,21 @@ import json
 import time
 import logging
 
-import google.generativeai as genai
+from groq import Groq
 
 logger = logging.getLogger(__name__)
 
 # --- Configuration ---------------------------------------------------------
 
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
-MODEL_NAME = "gemini-2.5-flash"
+GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
 
-if not GEMINI_API_KEY:
+if not GROQ_API_KEY:
     logger.warning(
-        "GEMINI_API_KEY not set. LLM feedback will fall back to a "
-        "keyword-only response. Set it in your environment or Render dashboard."
+        "GROQ_API_KEY not set. Falling back to keyword feedback."
     )
-    _model = None
+    _client = None
 else:
-    genai.configure(api_key=GEMINI_API_KEY)
-    _model = genai.GenerativeModel(MODEL_NAME)
+    _client = Groq(api_key=GROQ_API_KEY)
 
 
 # --- Prompt ------------------------------------------------------------
@@ -105,7 +102,7 @@ def generate_feedback(
     Never raises -- on any failure it returns the deterministic fallback
     so the rest of the app keeps working even if the LLM call fails.
     """
-    if _model is None:
+    if _client is None:
         return _fallback_feedback(match_score, matched_keywords, missing_keywords)
 
     prompt = _build_prompt(
@@ -115,8 +112,18 @@ def generate_feedback(
     last_error = None
     for attempt in range(retries + 1):
         try:
-            response = _model.generate_content(prompt)
-            raw = response.text.strip()
+            response = _client.chat.completions.create(
+                model="llama-3.3-70b-versatile",
+                messages=[
+                    {
+                        "role": "user",
+                        "content": prompt
+                    }
+                ],
+                temperature=0.3
+            )
+
+            raw = response.choices[0].message.content.strip()
             # Strip accidental markdown fences in case the model adds them anyway
             raw = raw.replace("```json", "").replace("```", "").strip()
             parsed = json.loads(raw)
