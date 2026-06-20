@@ -68,7 +68,8 @@ def matcher():
                 message="Please upload resumes and enter job description"
             )
         vectorizer = TfidfVectorizer(stop_words='english')
-        vectors = TfidfVectorizer().fit_transform(
+
+        vectors = vectorizer.fit_transform(
             [job_description] + resumes
         )
 
@@ -86,7 +87,6 @@ def matcher():
         results = []
 
         for i, score in enumerate(similarities):
-            feature_names = vectorizer.get_feature_names_out()
 
             jd_words = set(job_description.lower().split())
             resume_words = set(resumes[i].lower().split())
