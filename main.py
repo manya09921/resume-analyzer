@@ -5,6 +5,7 @@ from PyPDF2 import PdfReader
 import docx2txt
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+from llm_feedback import generate_feedback
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads/'
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -66,6 +67,7 @@ def matcher():
                 'matchresume.html',
                 message="Please upload resumes and enter job description"
             )
+        vectorizer = TfidfVectorizer(stop_words='english')
         vectors = TfidfVectorizer().fit_transform(
             [job_description] + resumes
         )
@@ -79,10 +81,28 @@ def matcher():
             [job_vector],
             resume_vectors
         )[0]
+        feedbacks = []
 
         results = []
 
         for i, score in enumerate(similarities):
+            feature_names = vectorizer.get_feature_names_out()
+
+            jd_words = set(job_description.lower().split())
+            resume_words = set(resumes[i].lower().split())
+
+            matched_keywords = list(jd_words & resume_words)[:10]
+            missing_keywords = list(jd_words - resume_words)[:10]
+
+            feedback = generate_feedback(
+                resume_text=resumes[i],
+                job_description=job_description,
+                match_score=float(score),
+                matched_keywords=matched_keywords,
+                missing_keywords=missing_keywords
+            )
+
+            feedbacks.append(feedback)
             results.append({
                 "filename": filenames[i],
                 "score": round(score * 100, 2)
@@ -103,7 +123,8 @@ def matcher():
         return render_template(
             'matchresume.html',
             message= "Resume matching completed successfully. ", top_resumes=top_resumes,
-            similarity_score=similarity_score
+            similarity_score=similarity_score,
+            feedbacks=feedbacks
         )
     return render_template('matchresume.html')
 

@@ -94,6 +94,33 @@
                 </ul>
             </div>
             {% endif %}
+            {% if feedbacks %}
+            <h3 class="mt-4">AI Feedback</h3>
+            {% for feedback in feedbacks %}
+            <div class="card mt-3 p-3">
+                <h5>Summary</h5>
+                <p>{{ feedback.summary }}</p>
+                <h5>Strengths</h5>
+                <ul>
+                    {% for item in feedback.strengths %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+                <h5>Gaps</h5>
+                <ul>
+                    {% for item in feedback.gaps %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+                <h5>Suggestions</h5>
+                <ul>
+                    {% for item in feedback.suggestions %}
+                    <li>{{ item }}</li>
+                    {% endfor %}
+                </ul>
+            </div>
+          {% endfor %}
+        {% endif %}
         </div>
     </div>
 </div>

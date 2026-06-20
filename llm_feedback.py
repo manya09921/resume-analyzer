@@ -1,0 +1,132 @@
+
+import os
+import json
+import time
+import logging
+
+import google.generativeai as genai
+
+logger = logging.getLogger(__name__)
+
+# --- Configuration ---------------------------------------------------------
+
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+MODEL_NAME = "gemini-2.5-flash"
+
+if not GEMINI_API_KEY:
+    logger.warning(
+        "GEMINI_API_KEY not set. LLM feedback will fall back to a "
+        "keyword-only response. Set it in your environment or Render dashboard."
+    )
+    _model = None
+else:
+    genai.configure(api_key=GEMINI_API_KEY)
+    _model = genai.GenerativeModel(MODEL_NAME)
+
+
+# --- Prompt ------------------------------------------------------------
+
+_PROMPT_TEMPLATE = """You are an experienced technical recruiter reviewing how well a candidate's resume matches a job description.
+
+You are given:
+1. A similarity score (0-1) already computed using TF-IDF/cosine similarity.
+2. A list of keywords/skills that matched between the resume and JD.
+3. A list of keywords/skills present in the JD but missing from the resume.
+4. The raw resume text and job description text for additional context.
+
+Your job is to produce a short, actionable, recruiter-style assessment.
+Be specific and concrete. Do not just repeat the raw keyword lists; synthesize
+them into useful guidance a candidate could actually act on.
+
+Respond ONLY with valid JSON, no markdown formatting, no backticks, in this exact shape:
+{{
+  "summary": "2-3 sentence plain-English verdict on fit",
+  "strengths": ["short bullet", "short bullet"],
+  "gaps": ["short bullet", "short bullet"],
+  "suggestions": ["specific, actionable rewrite/addition suggestion", "another one"]
+}}
+
+Similarity score: {match_score}
+Matched keywords: {matched_keywords}
+Missing keywords: {missing_keywords}
+
+Resume text (truncated):
+{resume_excerpt}
+
+Job description text (truncated):
+{jd_excerpt}
+"""
+
+
+def _truncate(text: str, max_chars: int = 3000) -> str:
+    """Keep prompts small to control token usage/cost and latency."""
+    text = text or ""
+    return text[:max_chars]
+
+
+def _build_prompt(resume_text, job_description, match_score, matched_keywords, missing_keywords):
+    return _PROMPT_TEMPLATE.format(
+        match_score=round(match_score, 3),
+        matched_keywords=", ".join(matched_keywords) if matched_keywords else "none detected",
+        missing_keywords=", ".join(missing_keywords) if missing_keywords else "none detected",
+        resume_excerpt=_truncate(resume_text),
+        jd_excerpt=_truncate(job_description),
+    )
+
+
+def _fallback_feedback(match_score, matched_keywords, missing_keywords):
+    """Used if the LLM call fails or no API key is configured, so the
+    app degrades gracefully instead of crashing or hanging."""
+    return {
+        "summary": (
+            f"Automated keyword match score: {round(match_score * 100)}%. "
+            "LLM-generated feedback is unavailable right now."
+        ),
+        "strengths": matched_keywords[:5],
+        "gaps": missing_keywords[:5],
+        "suggestions": [
+            "Add the missing keywords above to your resume if you genuinely have that experience."
+        ],
+    }
+
+
+def generate_feedback(
+    resume_text: str,
+    job_description: str,
+    match_score: float,
+    matched_keywords: list,
+    missing_keywords: list,
+    retries: int = 2,
+) -> dict:
+    """
+    Calls Gemini to generate qualitative feedback layered on top of the
+    existing TF-IDF score. Returns a dict with summary/strengths/gaps/suggestions.
+
+    Never raises -- on any failure it returns the deterministic fallback
+    so the rest of the app keeps working even if the LLM call fails.
+    """
+    if _model is None:
+        return _fallback_feedback(match_score, matched_keywords, missing_keywords)
+
+    prompt = _build_prompt(
+        resume_text, job_description, match_score, matched_keywords, missing_keywords
+    )
+
+    last_error = None
+    for attempt in range(retries + 1):
+        try:
+            response = _model.generate_content(prompt)
+            raw = response.text.strip()
+            # Strip accidental markdown fences in case the model adds them anyway
+            raw = raw.replace("```json", "").replace("```", "").strip()
+            parsed = json.loads(raw)
+            for key in ("summary", "strengths", "gaps", "suggestions"):
+                parsed.setdefault(key, [])
+            return parsed
+        except Exception as e:
+            last_error = e
+            logger.warning("Gemini feedback attempt %d failed: %s", attempt + 1, e)
+            time.sleep(1)
+
+    logger.error("All Gemini feedback attempts failed: %s", last_error)
+    return _fallback_feedback(match_score, matched_keywords, missing_keywords)
