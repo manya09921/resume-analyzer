@@ -44,6 +44,10 @@
     .text-muted{
         font-size: 14px;
     }
+    .feedback-title{
+    color:#0c5460;
+    font-weight:bold;
+    }
 
   </style>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -95,24 +99,25 @@
             </div>
             {% endif %}
             {% if feedbacks %}
-            <h3 class="mt-4">AI Feedback</h3>
+            <h3 class="mt-4 feedback-title">Resume Analysis & Suggestions</h3>
             {% for feedback in feedbacks %}
-            <div class="card mt-3 p-3">
-                <h5>Summary</h5>
+            <div class="card mt-3 p-3 bg-light border-0 shadow-sm">
+                <h5 class="text-primary">{{ top_resumes[loop.index0] }}</h5>
+                <h5 class="text-primary">Summary</h5>
                 <p>{{ feedback.summary }}</p>
-                <h5>Strengths</h5>
+                <h5 class="text-success">Strengths</h5>
                 <ul>
                     {% for item in feedback.strengths %}
                     <li>{{ item }}</li>
                     {% endfor %}
                 </ul>
-                <h5>Gaps</h5>
+                <h5 class="text-danger">Gaps</h5>
                 <ul>
                     {% for item in feedback.gaps %}
                     <li>{{ item }}</li>
                     {% endfor %}
                 </ul>
-                <h5>Suggestions</h5>
+                <h5 class="text-warning">Suggestions</h5>
                 <ul>
                     {% for item in feedback.suggestions %}
                     <li>{{ item }}</li>
