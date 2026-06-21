@@ -45,6 +45,7 @@ Guidelines:
 - Keep each bullet short and impactful.
 - Write feedback in a professional recruiter tone.
 - Base feedback on both the resume content and the job description.
+- Do not mention or quote the similarity score in the summary.
 
 Respond ONLY with valid JSON, no markdown formatting, no backticks, in this exact shape:
 {{
