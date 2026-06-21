@@ -31,9 +31,20 @@ You are given:
 3. A list of keywords/skills present in the JD but missing from the resume.
 4. The raw resume text and job description text for additional context.
 
-Your job is to produce a short, actionable, recruiter-style assessment.
-Be specific and concrete. Do not just repeat the raw keyword lists; synthesize
-them into useful guidance a candidate could actually act on.
+Your job is to act as a senior technical recruiter and ATS reviewer.
+
+Provide professional, concise, and actionable feedback.
+
+Guidelines:
+- Focus on skills, projects, technologies, and experience relevant to the job description.
+- Highlight the candidate's strongest matching qualifications.
+- Identify important missing skills or qualifications.
+- Suggest specific resume improvements that can increase interview chances.
+- Avoid generic advice.
+- Do not repeat the same point across multiple sections.
+- Keep each bullet short and impactful.
+- Write feedback in a professional recruiter tone.
+- Base feedback on both the resume content and the job description.
 
 Respond ONLY with valid JSON, no markdown formatting, no backticks, in this exact shape:
 {{
@@ -76,8 +87,8 @@ def _fallback_feedback(match_score, matched_keywords, missing_keywords):
     app degrades gracefully instead of crashing or hanging."""
     return {
         "summary": (
-            f"Automated keyword match score: {round(match_score * 100)}%. "
-            "LLM-generated feedback is unavailable right now."
+            f"This resume matches approximately {round(match_score * 100)}% "
+            "of the job requirements based on keyword analysis."
         ),
         "strengths": matched_keywords[:5],
         "gaps": missing_keywords[:5],
